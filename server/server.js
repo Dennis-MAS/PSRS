@@ -18,7 +18,6 @@ if (process.env.NODE_ENV === 'production' && !process.env.MONGODB_URI) {
 await connectDatabase(uri);
 
 async function seedDemoUsers() {
-  if (await User.estimatedDocumentCount() > 0) return;
   const password = process.env.SEED_ADMIN_PASSWORD || 'Demo#2026pass';
   const passwordHash = await bcrypt.hash(password, 12);
   const now = new Date();
@@ -32,10 +31,12 @@ async function seedDemoUsers() {
     { fullName: 'Otieno Citizen', email: 'citizen2@psrs.test', role: 'citizen', department: null },
     { fullName: 'Fatuma Citizen', email: 'citizen3@psrs.test', role: 'citizen', department: null },
   ];
+  let created = 0;
   for (const u of users) {
-    await User.updateOne({ email: u.email }, { $set: { ...u, passwordHash, accountStatus: 'active', emailVerified: true, acceptedTermsAt: now } }, { upsert: true });
+    const res = await User.updateOne({ email: u.email }, { $set: { ...u, passwordHash, accountStatus: 'active', emailVerified: true, acceptedTermsAt: now } }, { upsert: true });
+    if (res.upsertedCount) created++;
   }
-  console.log(`Demo accounts seeded. Password for all demo accounts: ${password}`);
+  console.log(`Demo accounts ensured (${created} new). Password for all demo accounts: ${password}`);
 }
 
 async function seedDefaultSettings() {
