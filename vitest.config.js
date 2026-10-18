@@ -1,0 +1,1 @@
+export default { test: { environment: 'node', fileParallelism: false, testTimeout: 30000, hookTimeout: 30000, env: { NODE_ENV: 'test', SESSION_SECRET: 'test-secret', UPLOAD_DIR: 'storage/test-uploads', APP_URL: 'http://localhost:3000' } } };
