@@ -49,6 +49,9 @@ a.chip:hover { background: var(--lemon); border-color: #fde047; }
 
 /* forms */
 .field { margin-bottom: var(--s4); } .field label, .lbl { display: block; font-weight: 800; font-size: .9rem; margin-bottom: var(--s1); color: var(--navy); }
+.field-inputs { display: flex; align-items: center; gap: var(--s1); }
+.pw-toggle { background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm); padding: var(--s1) var(--s2); font-size: 1rem; line-height: 1; cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.pw-toggle:hover { background: var(--lav); border-color: #c4b5fd; }
 input, select, textarea { width: 100%; padding: .65rem .9rem; border: 2px solid #cfd9e6; border-radius: var(--r-sm); font: inherit; background: #fff; color: var(--text); min-height: 46px; transition: border-color var(--t), box-shadow var(--t); }
 textarea { min-height: 120px; resize: vertical; } input[type=checkbox], input[type=radio] { width: 1.15rem; height: 1.15rem; min-height: 0; accent-color: var(--green); margin-top: .2rem; flex: none; }
 input:focus, select:focus, textarea:focus { border-color: var(--green-3); box-shadow: 0 0 0 4px rgba(34,197,94,.18); outline: none; }

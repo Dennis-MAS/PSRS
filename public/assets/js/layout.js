@@ -57,14 +57,17 @@ export async function mountPublic() {
   fill(cached);
   const links = h('div', { class: 'nav-links', id: 'nav-links' }, link('Home', '/'), link('Services', '/services.html'), link('How it works', '/how-it-works.html'), link('Track', '/track.html'), link('About', '/about.html'), link('Help', '/help.html'), right);
   const toggle = h('button', { class: 'nav-toggle', 'aria-expanded': 'false', 'aria-controls': 'nav-links', onclick: (e) => { const o = links.classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded', o); } }, '☰ Menu');
-  const main = h('main', { id: 'view' }); const banner = h('div', { hidden: true, class: 'banner' }); const footer = siteFooter();
+  const main = h('main', { id: 'view' }); const banner = h('div', { hidden: true, class: 'banner' });
+  const isAuth = ['/login.html', '/staff-login.html', '/register.html', '/forgot-password.html', '/activate.html'].includes(location.pathname);
+  let footerEl = null;
+  const site = h('div', { class: 'site' }, h('a', { href: '#view', class: 'btn skip' }, 'Skip to content'), h('nav', { class: 'site-nav', 'aria-label': 'Main' }, h('div', { class: 'container' }, brand(), toggle, links)), banner, main, isAuth ? null : (footerEl = siteFooter()));
   const app = document.getElementById('app'); clear(app); app.removeAttribute('aria-busy');
-  app.append(h('div', { class: 'site' }, h('a', { href: '#view', class: 'btn skip' }, 'Skip to content'), h('nav', { class: 'site-nav', 'aria-label': 'Main' }, h('div', { class: 'container' }, brand(), toggle, links)), banner, main, footer));
+  app.append(site);
   publicSettings().then((s) => {
     applyBranding(s);
     if (s.maintenanceMode) { banner.textContent = '🛠️ The system is in maintenance mode. You can look around, but new requests are paused.'; banner.hidden = false; }
     else if (s.announcement) { banner.textContent = '📣 ' + s.announcement; banner.hidden = false; }
-    if (s.supportEmail || s.supportPhone) footer.querySelector('.support-text').textContent = 'Need help? ' + [s.supportEmail, s.supportPhone].filter(Boolean).join(' · ');
+    if (footerEl && (s.supportEmail || s.supportPhone)) footerEl.querySelector('.support-text').textContent = 'Need help? ' + [s.supportEmail, s.supportPhone].filter(Boolean).join(' · ');
   });
   const user = await currentUser();
   if ((user?.role || null) !== (cached?.role || null)) fill(user);

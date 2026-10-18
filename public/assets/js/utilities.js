@@ -26,12 +26,22 @@ export function toast(msg, type = '') {
 }
 export const alertBox = (msg, type = 'error') => h('div', { class: `alert ${type}`, role: type === 'error' ? 'alert' : 'status' }, msg);
 
-export function field({ label, name, type = 'text', required, value, hint, options, rows, ...rest }) {
+export function field({ label, name, type = 'text', required, value, hint, options, rows, toggle, ...rest }) {
   let input;
   if (type === 'select') input = h('select', { id: name, name, required, ...rest }, options.map((o) => h('option', { value: o.value, selected: String(o.value) === String(value ?? '') }, o.label)));
   else if (type === 'textarea') { input = h('textarea', { id: name, name, required, rows, ...rest }); input.value = value ?? ''; }
   else input = h('input', { id: name, name, type, required, value, ...rest });
-  return h('div', { class: 'field', 'data-field': name }, h('label', { for: name }, label, required ? ' *' : ''), input, hint ? h('div', { class: 'hint' }, hint) : null, h('div', { class: 'field-error', 'aria-live': 'polite' }));
+  const controls = h('div', { class: 'field-inputs' }, input);
+  if (toggle && type === 'password') {
+    const show = h('button', { type: 'button', class: 'pw-toggle', 'aria-label': 'Show password', onclick: () => {
+      const revealing = input.type === 'password';
+      input.type = revealing ? 'text' : 'password';
+      show.textContent = revealing ? '🙈' : '👁️';
+      show.setAttribute('aria-label', revealing ? 'Hide password' : 'Show password');
+    } }, '👁️');
+    controls.append(show);
+  }
+  return h('div', { class: 'field', 'data-field': name }, h('label', { for: name }, label, required ? ' *' : ''), controls, hint ? h('div', { class: 'hint' }, hint) : null, h('div', { class: 'field-error', 'aria-live': 'polite' }));
 }
 export function showErrors(form, err) {
   form.querySelectorAll('.field').forEach((f) => { f.classList.remove('invalid'); const e = f.querySelector('.field-error'); if (e) e.textContent = ''; });

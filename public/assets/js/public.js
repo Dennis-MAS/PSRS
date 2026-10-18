@@ -118,7 +118,7 @@ const pages = {
 
   async login() {
     if (user) return location.replace(HOME[user.role]);
-    const f = h('form', { novalidate: true }, field({ label: 'Email', name: 'email', type: 'email', required: true, autocomplete: 'username' }), field({ label: 'Password', name: 'password', type: 'password', required: true, autocomplete: 'current-password' }),
+    const f = h('form', { novalidate: true }, field({ label: 'Email', name: 'email', type: 'email', required: true, autocomplete: 'username' }), field({ label: 'Password', name: 'password', type: 'password', required: true, autocomplete: 'current-password', toggle: true }),
       h('button', { class: 'btn', type: 'submit' }, 'Log in'), h('p', { class: 'small' }, link('Forgot your password?', '/forgot-password.html')));
     f.addEventListener('submit', async (e) => { e.preventDefault(); clearErrors(f); if (!f.reportValidity()) return;
       try { const r = await withBusy(f.querySelector('button'), () => post('/auth/login', { email: f.elements.email.value, password: f.elements.password.value, portal: 'citizen' })); setCsrf(r.csrfToken); cacheUser(r.user); location.href = safeNext() || HOME[r.user.role]; } catch (err) {
@@ -129,7 +129,7 @@ const pages = {
 
   async 'staff-login'() {
     if (user) return location.replace(HOME[user.role]);
-    const f = h('form', { novalidate: true }, field({ label: 'Staff email', name: 'email', type: 'email', required: true, autocomplete: 'username' }), field({ label: 'Password', name: 'password', type: 'password', required: true, autocomplete: 'current-password' }), h('button', { class: 'btn', type: 'submit' }, 'Enter staff portal'));
+    const f = h('form', { novalidate: true }, field({ label: 'Staff email', name: 'email', type: 'email', required: true, autocomplete: 'username' }), field({ label: 'Password', name: 'password', type: 'password', required: true, autocomplete: 'current-password', toggle: true }), h('button', { class: 'btn', type: 'submit' }, 'Enter staff portal'));
     f.addEventListener('submit', async (e) => { e.preventDefault(); clearErrors(f); if (!f.reportValidity()) return;
       try { const r = await withBusy(f.querySelector('button'), () => post('/auth/login', { email: f.elements.email.value, password: f.elements.password.value, portal: 'staff' })); setCsrf(r.csrfToken); cacheUser(r.user); location.href = safeNext() || HOME[r.user.role]; } catch (err) { showErrors(f, err); } });
     main.append(h('div', { class: 'auth-wrap staff' }, h('div', { class: 'card auth-card' }, h('div', { class: 'auth-badge' }, '🛡️'), h('h1', {}, 'Staff portal'), h('p', { class: 'muted' }, 'For service officers and administrators. Staff accounts are created by an administrator.'), f, termsNote, h('hr'), h('p', { class: 'small muted' }, 'Not staff? ', link('Citizen login', '/login.html')))));
@@ -141,8 +141,8 @@ const pages = {
     if (cfg.registrationOpen === false) return main.append(h('div', { class: 'auth-wrap' }, h('div', { class: 'card auth-card center' }, h('div', { class: 'auth-badge' }, '🚪'), h('h1', {}, 'Registration is closed'), h('p', { class: 'muted' }, 'New accounts are paused right now. If you already have an account you can still log in.'), link('Go to login', '/login.html', 'btn'))));
     const accept = h('input', { type: 'checkbox', id: 'acceptTerms', name: 'acceptTerms' });
     const f = h('form', { novalidate: true }, field({ label: 'Full name', name: 'fullName', required: true, autocomplete: 'name' }), field({ label: 'Email', name: 'email', type: 'email', required: true, autocomplete: 'email' }),
-      field({ label: 'Phone number', name: 'phone', type: 'tel', autocomplete: 'tel', hint: 'Optional, e.g. +254 700 000 000' }), field({ label: 'Password', name: 'password', type: 'password', required: true, autocomplete: 'new-password', minlength: 8, hint: 'At least 8 characters with upper case, lower case and a number.' }),
-      field({ label: 'Confirm password', name: 'confirmPassword', type: 'password', required: true, autocomplete: 'new-password' }),
+      field({ label: 'Phone number', name: 'phone', type: 'tel', autocomplete: 'tel', hint: 'Optional, e.g. +254 700 000 000' }),       field({ label: 'Password', name: 'password', type: 'password', required: true, autocomplete: 'new-password', minlength: 8, hint: 'At least 8 characters with upper case, lower case and a number.', toggle: true }),
+      field({ label: 'Confirm password', name: 'confirmPassword', type: 'password', required: true, autocomplete: 'new-password', toggle: true }),
       h('div', { class: 'field', 'data-field': 'acceptTerms' }, h('label', { class: 'check', for: 'acceptTerms' }, accept, h('span', {}, 'I have read and accept the ', h('a', { href: '/terms.html', target: '_blank', rel: 'noopener' }, 'Terms & Conditions'), ' and ', h('a', { href: '/privacy.html', target: '_blank', rel: 'noopener' }, 'Privacy Notice'), '.')), h('div', { class: 'field-error' })),
       h('button', { class: 'btn', type: 'submit' }, 'Create account'));
     f.addEventListener('submit', async (e) => { e.preventDefault(); clearErrors(f);
@@ -150,6 +150,12 @@ const pages = {
       if (Object.keys(bad).length) return showErrors(f, { status: 422, message: 'Please fix the highlighted fields.', fields: bad });
       if (!f.reportValidity()) return;
       try { const r = await withBusy(f.querySelector('button'), () => post('/auth/register', { fullName: f.elements.fullName.value, email: f.elements.email.value, phone: f.elements.phone.value, password: f.elements.password.value, confirmPassword: f.elements.confirmPassword.value, acceptTerms: true })); if (r.requiresActivation) return showInbox(f.elements.email.value, r); setCsrf(r.csrfToken); cacheUser(r.user); location.href = HOME.citizen; } catch (err) { showErrors(f, err); } });
+    const clearField = (el) => { el.closest('.field')?.classList.remove('invalid'); const err = el.closest('.field')?.querySelector('.field-error'); if (err) err.textContent = ''; };
+    f.elements.password.addEventListener('input', () => { clearField(f.elements.password); if (f.elements.confirmPassword.value && f.elements.password.value !== f.elements.confirmPassword.value) { f.elements.confirmPassword.closest('.field').classList.add('invalid'); const ce = f.elements.confirmPassword.closest('.field').querySelector('.field-error'); if (ce) ce.textContent = 'Passwords do not match'; } else { clearField(f.elements.confirmPassword); } });
+    f.elements.confirmPassword.addEventListener('input', () => { clearField(f.elements.confirmPassword); if (f.elements.password.value !== f.elements.confirmPassword.value) { f.elements.confirmPassword.closest('.field').classList.add('invalid'); const ce = f.elements.confirmPassword.closest('.field').querySelector('.field-error'); if (ce) ce.textContent = 'Passwords do not match'; } });
+    f.elements.email.addEventListener('input', () => clearField(f.elements.email));
+    f.elements.fullName.addEventListener('input', () => clearField(f.elements.fullName));
+    f.elements.acceptTerms.addEventListener('change', () => clearField(f.elements.acceptTerms));
     const card = h('div', { class: 'card auth-card' });
     function showInbox(addr, r) { // account created, waiting for the emailed activation link
       clear(card).append(h('div', { class: 'auth-badge' }, '📬'), h('h1', {}, 'Check your inbox'), h('p', {}, 'We sent an activation link to ', h('strong', {}, addr), '. Open it to activate your account, then log in.'), r.emailSent ? null : alertBox(r.message, 'warn'), h('p', { class: 'small muted' }, 'The link works for 24 hours. Check your spam folder if you cannot find it.'),
@@ -170,7 +176,7 @@ const pages = {
   async 'forgot-password'() {
     const token = new URLSearchParams(location.search).get('token'); const card = h('div', { class: 'card auth-card' }); main.append(h('div', { class: 'auth-wrap' }, card));
     if (token) {
-      const f = h('form', { novalidate: true }, field({ label: 'New password', name: 'password', type: 'password', required: true, autocomplete: 'new-password' }), field({ label: 'Confirm new password', name: 'confirmPassword', type: 'password', required: true, autocomplete: 'new-password' }), h('button', { class: 'btn', type: 'submit' }, 'Set new password'));
+      const f = h('form', { novalidate: true }, field({ label: 'New password', name: 'password', type: 'password', required: true, autocomplete: 'new-password', toggle: true }), field({ label: 'Confirm new password', name: 'confirmPassword', type: 'password', required: true, autocomplete: 'new-password', toggle: true }), h('button', { class: 'btn', type: 'submit' }, 'Set new password'));
       f.addEventListener('submit', async (e) => { e.preventDefault(); clearErrors(f);
         try { await withBusy(f.querySelector('button'), () => post('/auth/reset-password', { token, password: f.elements.password.value, confirmPassword: f.elements.confirmPassword.value })); toast('Password updated', 'success'); setTimeout(() => { location.href = '/login.html'; }, 900); } catch (err) { showErrors(f, err); } });
       card.append(h('div', { class: 'auth-badge' }, '🔑'), h('h1', {}, 'Choose a new password'), f);
