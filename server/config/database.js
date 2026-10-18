@@ -1,7 +1,5 @@
+import 'dotenv/config';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
-
-let memoryServer;
 
 export async function connectDatabase(uri) {
   const targetUri = uri || process.env.MONGODB_URI || process.env.MONGODB_URI_TEST || 'mongodb://127.0.0.1:27017/psrs';
@@ -11,38 +9,18 @@ export async function connectDatabase(uri) {
     await mongoose.connect(targetUri, { serverSelectionTimeoutMS: 8000 });
     return mongoose.connection;
   } catch (error) {
-    const shouldFallbackToMemory =
-      !uri ||
-      /localhost|127\.0\.0\.1/.test(targetUri) ||
-      process.env.NODE_ENV === 'test' ||
-      process.env.USE_IN_MEMORY_DB === 'true';
+    const message =
+      'No MongoDB server is available. Start a local MongoDB instance or provide a reachable Atlas URI. ' +
+      'The project intentionally does not download a temporary MongoDB binary during startup.';
 
-    if (!shouldFallbackToMemory) {
-      throw error;
+    if (process.env.USE_IN_MEMORY_DB === 'true') {
+      throw new Error(`${message} Set USE_IN_MEMORY_DB=false to disable this fallback path.`);
     }
 
-    if (!memoryServer) {
-      const dbName = (() => {
-        try {
-          return new URL(targetUri).pathname.replace(/^\//, '') || 'psrs';
-        } catch {
-          return 'psrs';
-        }
-      })();
-
-      memoryServer = await MongoMemoryServer.create({ instance: { dbName } });
-    }
-
-    await mongoose.disconnect().catch(() => {});
-    await mongoose.connect(memoryServer.getUri(), { serverSelectionTimeoutMS: 8000 });
-    return mongoose.connection;
+    throw new Error(`${message} Original error: ${error.message}`);
   }
 }
 
 export async function disconnectDatabase() {
   await mongoose.disconnect().catch(() => {});
-  if (memoryServer) {
-    await memoryServer.stop();
-    memoryServer = null;
-  }
 }

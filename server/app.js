@@ -22,7 +22,7 @@ export function createApp({ sessionStore } = {}) {
   const app = express();
   const prod = process.env.NODE_ENV === 'production';
   if (prod && !process.env.SESSION_SECRET) throw new Error('SESSION_SECRET is required in production');
-  if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
+  app.set('trust proxy', true);
   app.disable('x-powered-by');
   app.set('query parser', 'simple'); // no nested query objects (NoSQL operator injection)
 

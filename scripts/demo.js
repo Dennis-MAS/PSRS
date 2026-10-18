@@ -1,13 +1,6 @@
-// One-command demo: starts a throwaway in-memory MongoDB, seeds demo data and runs the app.
-// Usage: npm run demo   (needs internet the first time to download a MongoDB binary)
-import { MongoMemoryServer } from 'mongodb-memory-server';
+// Demo script is intentionally disabled because the environment must not download MongoDB binaries.
+// Use a local MongoDB instance or Atlas instead.
 
-const mongod = await MongoMemoryServer.create();
-process.env.MONGODB_URI = mongod.getUri('psrs');
-process.env.NODE_ENV ||= 'development';
-process.env.SESSION_SECRET ||= 'demo-only-secret';
-await import('../database/seed.js');
-await import('../server/server.js');
-const stop = async () => { await mongod.stop(); process.exit(0); };
-process.on('SIGINT', stop); process.on('SIGTERM', stop);
-console.log('Demo ready. Log in with admin@psrs.test / Demo#2026pass');
+console.error('Demo mode is disabled in this environment because it would require downloading MongoDB binaries.');
+console.error('Install MongoDB locally or set MONGODB_URI to a reachable database, then run: npm start');
+process.exit(1);
