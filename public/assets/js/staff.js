@@ -181,7 +181,7 @@ const pages = {
       clear(status).append(h('p', { class: 'muted small' }, 'Checking...'));
       try {
         const r = await (btn ? withBusy(btn, () => get('/admin/email/status')) : get('/admin/email/status')); const st = r.status; clear(status);
-        if (!st.configured) status.append(alertBox('Brevo is not set up on this server. Add BREVO_API_KEY and BREVO_SENDER_EMAIL to the environment (.env), then restart. The system keeps working without email.', 'warn'));
+        if (!st.configured) status.append(h('p', { class: 'muted small' }, 'Email is not configured on this server yet. The application will keep working without email until BREVO_API_KEY and BREVO_SENDER_EMAIL are provided in the server environment.'));
         else if (st.connected) status.append(h('p', {}, h('span', { class: 'status-dot ok' }), h('strong', {}, 'Connected to Brevo'), st.account ? ` (${st.account})` : '', h('br'), h('span', { class: 'muted small' }, `Sending as ${r.senderName || 'PSRS'} <${r.senderEmail}>`)));
         else status.append(alertBox(`Brevo rejected the connection: ${st.error}. Check the API key and that the sender address is verified in Brevo.`, 'error'));
       } catch (e) { clear(status).append(alertBox(e.message)); }
