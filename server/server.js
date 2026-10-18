@@ -4,7 +4,8 @@ import mongoose from 'mongoose';
 import MongoStore from 'connect-mongo';
 import { connectDatabase } from './config/database.js';
 import { createApp } from './app.js';
-import { User } from './models/index.js';
+import { User, Setting } from './models/index.js';
+import { DEFS } from './services/settings.js';
 
 const port = Number(process.env.PORT || 3000);
 const uri = process.env.MONGODB_URI || process.env.MONGODB_URI_TEST || undefined;
@@ -37,7 +38,15 @@ async function seedDemoUsers() {
   console.log(`Demo accounts seeded. Password for all demo accounts: ${password}`);
 }
 
+async function seedDefaultSettings() {
+  for (const [key, def] of Object.entries(DEFS)) {
+    await Setting.updateOne({ _id: key }, { $setOnInsert: { value: String(def.def) } }, { upsert: true });
+  }
+}
+
 await seedDemoUsers();
+await seedDefaultSettings();
+console.log('Default settings ensured (maintenanceMode off unless you enable it in Admin Settings).');
 // SESSION_STORE=memory is for local demos on MongoDB-compatible servers without TTL indexes; never use it in production.
 const sessionStore = process.env.SESSION_STORE === 'memory' && process.env.NODE_ENV !== 'production'
   ? undefined
