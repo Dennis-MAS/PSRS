@@ -43,6 +43,9 @@ async function seedDefaultSettings() {
   for (const [key, def] of Object.entries(DEFS)) {
     await Setting.updateOne({ _id: key }, { $setOnInsert: { value: String(def.def) } }, { upsert: true });
   }
+  // Always start with maintenance mode off so an old stuck flag does not lock everyone out.
+  // Admins can re-enable it from Admin → Settings after the deploy.
+  await Setting.updateOne({ _id: 'maintenanceMode' }, { $set: { value: 'false' } }, { upsert: true });
 }
 
 await seedDemoUsers();
