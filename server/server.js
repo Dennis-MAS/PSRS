@@ -5,8 +5,12 @@ import { connectDatabase } from './config/database.js';
 import { createApp } from './app.js';
 
 const port = Number(process.env.PORT || 3000);
-const uri = process.env.MONGODB_URI;
-if (!uri) { console.error('MONGODB_URI is not set. Copy .env.example to .env first.'); process.exit(1); }
+const uri = process.env.MONGODB_URI || process.env.MONGODB_URI_TEST || undefined;
+
+if (process.env.NODE_ENV === 'production' && !process.env.MONGODB_URI) {
+  console.error('MONGODB_URI is not set. Copy .env.example to .env first.');
+  process.exit(1);
+}
 
 await connectDatabase(uri);
 // SESSION_STORE=memory is for local demos on MongoDB-compatible servers without TTL indexes; never use it in production.
