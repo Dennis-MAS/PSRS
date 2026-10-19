@@ -99,7 +99,7 @@ r.get('/:id/summary', wrap(async (req, res) => {
   const doc = await loadAuthorizedRequest(checkId(req.params.id), req.user);
   const full = await ServiceRequest.findById(doc._id).populate('service', 'name').populate('department', 'name');
   const text = [
-    'PUBLIC SERVICE REQUEST SYSTEM - REQUEST SUMMARY', '(Independent demonstration project, not an official document)', '',
+    'PUBLIC SERVICE REQUEST SYSTEM - REQUEST SUMMARY', '',
     `Reference:   ${full.referenceNumber}`, `Service:     ${full.service?.name}`, `Department:  ${full.department?.name}`,
     `Status:      ${full.status}`, `Submitted:   ${full.submittedAt.toISOString()}`, `Title:       ${full.title}`, '', full.description
   ].join('\n');

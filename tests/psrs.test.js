@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
 import { createApp } from '../server/app.js';
 import { connectDatabase } from '../server/config/database.js';
-import { csvCell } from '../server/utils/helpers.js';
+import { csvCell, nextReference } from '../server/utils/helpers.js';
 import { canTransition } from '../server/services/workflow.js';
 import { flushEmails, sendTemplate } from '../server/services/email.js';
 import * as M from '../server/models/index.js';
@@ -201,6 +201,41 @@ describe('services and departments', () => {
     await a.patch(`/api/v1/services/${made.body.service._id}/status`, { status: 'inactive' });
     expect((await pub.get('/api/v1/services?q=Brand')).body.items.length).toBe(0);
     expect((await a.post('/api/v1/departments', { name: 'Dept C' })).status).toBe(201);
+  });
+});
+
+describe('admin account deletion', () => {
+  it('anonymizes the account, retains request history and clears active assignments', async () => {
+    const admin = await as('admin@t.test');
+    const passwordHash = await bcrypt.hash(PASS, 4);
+    const person = await M.User.create({ fullName: 'History Person', email: 'history@t.test', role: 'citizen', passwordHash });
+    const req = await M.ServiceRequest.create({
+      referenceNumber: await nextReference(), citizen: person._id, service: fx.svcA._id, department: fx.deptA._id,
+      assignedOfficer: fx.offA._id, title: 'Keep this case', description: 'This request should remain after account deletion.', status: 'SUBMITTED'
+    });
+    const history = await M.RequestStatusHistory.create({ request: req._id, newStatus: 'SUBMITTED', changedBy: person._id, comment: 'Original submission' });
+    const comment = await M.RequestComment.create({ request: req._id, author: person._id, comment: 'Retain this comment.', visibility: 'citizen' });
+    await M.Notification.create({ recipient: person._id, request: req._id, title: 'Private notification', message: 'Remove with deleted account.' });
+    await M.PasswordReset.create({ user: person._id, tokenHash: 'hashed-token', expiresAt: new Date(Date.now() + 60000) });
+
+    expect((await admin.send('delete', `/api/v1/admin/users/${person._id}`)).status).toBe(200);
+    const anonymized = await M.User.findById(person._id);
+    expect(anonymized.fullName).toBe('Deleted account');
+    expect(anonymized.email).toBe(`deleted-${person._id}@deleted.invalid`);
+    expect(anonymized.phone).toBeUndefined();
+    expect(anonymized.deletedAt).toBeInstanceOf(Date);
+    expect(anonymized.accountStatus).toBe('suspended');
+    expect(await M.User.findOne({ email: person.email })).toBeNull();
+
+    const retained = await M.ServiceRequest.findById(req._id);
+    expect(retained).toBeTruthy();
+    expect(String(retained.citizen)).toBe(String(person._id));
+    expect(retained.assignedOfficer).toBeNull();
+    expect(await M.RequestStatusHistory.exists({ _id: history._id })).toBeTruthy();
+    expect(await M.RequestComment.exists({ _id: comment._id })).toBeTruthy();
+    expect(await M.Notification.countDocuments({ recipient: person._id })).toBe(0);
+    expect(await M.PasswordReset.countDocuments({ user: person._id })).toBe(0);
+    expect((await admin.send('delete', `/api/v1/admin/users/${fx.admin._id}`)).status).toBe(409);
   });
 });
 

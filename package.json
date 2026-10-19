@@ -1,7 +1,7 @@
 {
   "name": "public-service-request-system",
   "version": "1.0.0",
-  "description": "PSRS - independent demonstration mini eCitizen-style platform",
+  "description": "PSRS - public service request platform",
   "type": "module",
   "main": "server/server.js",
   "scripts": {

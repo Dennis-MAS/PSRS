@@ -40,7 +40,7 @@ const pages = {
         h('div', { class: 'row' }, ['💡 Streetlights|streetlight', '🚰 Water|water', '🗑️ Garbage|garbage', '🚧 Roads|infrastructure'].map((c) => { const [t, q] = c.split('|'); return link(t, `/services.html?q=${q}`, 'chip'); }))),
       img('hero-city', 'A friendly neighbourhood with a streetlight, a tap and a bin', 'art'))), wave());
     const list = h('div', { class: 'grid g3' }, loading());
-    main.append(section('', h('h2', { class: 'title' }, 'Services you can request'), h('p', { class: 'lead' }, 'Pick a category and tell us what needs fixing. Every service is an example category for this demonstration.'), list, h('p', { class: 'center' }, h('br'), link('See all services →', '/services.html', 'btn secondary'))));
+    main.append(section('', h('h2', { class: 'title' }, 'Services you can request'), h('p', { class: 'lead' }, 'Pick a category and tell us what needs fixing.'), list, h('p', { class: 'center' }, h('br'), link('See all services →', '/services.html', 'btn secondary'))));
     get('/services?limit=6').then((r) => { clear(list).append(...(r.items.length ? r.items.map(serviceCard) : [empty('No services available yet', 'Check back soon.')])); }).catch((e) => clear(list).append(alertBox(e.message)));
     main.append(h('section', { class: 'section alt', id: 'how' }, h('div', { class: 'container' }, h('h2', { class: 'title' }, 'How it works'), h('p', { class: 'lead' }, 'Four easy steps from problem to solution.'),
       h('ol', { class: 'steps' }, STEPS.map(([i, t, d]) => h('li', {}, img(i, t), h('h3', {}, t), h('p', { class: 'muted' }, d)))), h('p', { class: 'center' }, h('br'), link('See the full walkthrough →', '/how-it-works.html', 'btn secondary')))));
@@ -48,7 +48,6 @@ const pages = {
       [['📱', 'Accessible', 'Request services from any device, at any hour.', 'sky'], ['🔍', 'Transparent', 'See every status change and officer comment in one place.', 'mint'], ['🛡️', 'Private', 'You only ever see your own requests.', 'lav'], ['⚡', 'Efficient', 'Officers see assigned work and respond faster.', 'lemon'], ['🧾', 'Accountable', 'Every change is recorded with who did it and why.', 'peach'], ['📂', 'Organised', 'Requests, photos and replies stay together.', 'pink']]
         .map(([e, t, d, c]) => h('div', { class: `card hover tint-${c}` }, h('div', { style: null, class: 'icon' }, e), h('h3', {}, `${e} ${t}`), h('p', {}, d))))));
     main.append(h('section', { class: 'section alt', id: 'help' }, h('div', { class: 'container' }, h('h2', { class: 'title' }, 'Quick answers'), faq([
-      ['Does PSRS issue official documents?', 'No. This is an independent demonstration project. Requests are example categories and no real government documents are issued.'],
       ['How do I follow my request?', 'Log in and open your dashboard, or use Track with your reference number. Each request shows a progress tracker and timeline.'],
       ['Can I cancel a request?', 'Yes, while it is still pending and has not started review.']]), h('p', { class: 'center' }, h('br'), link('Visit the Help centre →', '/help.html', 'btn secondary')))));
     main.append(section('', cta('Ready to get something fixed?', 'Create an account in a minute and send your first request.')));
@@ -70,7 +69,7 @@ const pages = {
     const contact = h('p', { class: 'muted' }, 'Support details have not been set up yet.');
     main.append(pageHero('Help centre', 'Answers to common questions, and where to go when you are stuck.', 'help-support', 'A friendly support chat'));
     main.append(section('', h('div', { class: 'row', style: null }, [['📍 Track a request', '/track.html'], ['✍️ Register', '/register.html'], ['🔑 Citizen login', '/login.html'], ['🔁 Reset password', '/forgot-password.html'], ['🛡️ Staff portal', '/staff-login.html'], ['📜 Terms', '/terms.html']].map(([t, u]) => link(t, u, 'chip'))), h('br'),
-      h('div', { class: 'grid g2' }, h('div', {}, h('h2', {}, 'Getting started'), faq([['How do I create an account?', 'Choose Register, fill in your details, accept the Terms and Conditions and create your account. You are signed in straight away.'], ['What is a reference number?', 'Every request gets a unique number like PSRS-2026-000123. Use it on the Track page to see the status without logging in.'], ['Is PSRS an official government service?', 'No. It is an independent demonstration and is not affiliated with the Government of Kenya or eCitizen.']]),
+      h('div', { class: 'grid g2' }, h('div', {}, h('h2', {}, 'Getting started'), faq([['How do I create an account?', 'Choose Register, fill in your details, accept the Terms and Conditions and create your account. You are signed in straight away.'], ['What is a reference number?', 'Every request gets a unique number like PSRS-2026-000123. Use it on the Track page to see the status without logging in.']]),
         h('h2', {}, 'Requests'), faq([['What can I report?', 'Streetlights, water issues, garbage collection, infrastructure, complaints, inquiries and more. Pick the closest category.'], ['What does Awaiting information mean?', 'An officer needs more details. Open the request and reply in the comments, and it goes back to review.'], ['Can I cancel?', 'Yes, from the request page while the status is still Submitted.'], ['How long will it take?', 'Each service shows an illustrative time. Real times depend on the officers handling your request.']])),
       h('div', {}, h('h2', {}, 'Photos & files'), faq([['Can I attach a photo?', 'Yes, optionally. JPEG, PNG or PDF files are accepted, within the size limit shown for the category.'], ['Who can see my photo?', 'Only you and the officers responsible for your request. Files are stored privately.'], ['My upload was rejected', 'Check the file type and size. Files are checked by their content, so renamed files are refused.']]),
         h('h2', {}, 'Accounts & security'), faq([['I forgot my password', 'Use Reset password and we will email you a link (valid for 30 minutes). If emails are not set up on this site, ask an administrator for help.'], ['I did not get my activation email', 'Check your spam folder, then use “Resend activation email” on the login page. The link works for 24 hours. An administrator can also activate your account.'], ['Why was I locked out?', 'After five wrong passwords your account pauses for 15 minutes to protect it.'], ['I am staff. Where do I log in?', 'Use the Staff portal. Staff accounts are created by an administrator and cannot sign in through the citizen login.']])))));
@@ -80,18 +79,18 @@ const pages = {
 
   async about() {
     main.append(pageHero('About PSRS', 'A friendly digital front desk for public services: report a problem, follow it through, and see it fixed.', 'about-team', 'Citizens, officers and administrators working together'));
-    main.append(section('', h('div', { class: 'split' }, h('div', { class: 'stack' }, h('h2', {}, 'Our mission'), h('p', {}, 'The Public Service Request System shows how a mini eCitizen-style platform can work. Citizens submit requests, officers process them, and administrators watch over the whole service with clear numbers.'), h('p', {}, 'We care about three things: accessibility, accountability and transparency. Everyone can ask for help, every action is recorded, and everyone can see where their request stands.')), img('step-service', 'Service categories')),
+    main.append(section('', h('div', { class: 'split' }, h('div', { class: 'stack' }, h('h2', {}, 'Our mission'), h('p', {}, 'The Public Service Request System makes it easy to submit service requests, follow their progress, and see how each is handled. Citizens submit requests, officers process them, and administrators watch over the whole service with clear numbers.'), h('p', {}, 'We care about three things: accessibility, accountability and transparency. Everyone can ask for help, every action is recorded, and everyone can see where their request stands.')), img('step-service', 'Service categories')),
       h('h2', { class: 'title' }, 'What we believe'), h('div', { class: 'grid g4' }, [['🤝', 'Accessible', 'Simple pages that work on phones and computers.', 'mint'], ['🔎', 'Transparent', 'Clear status and a full timeline.', 'sky'], ['🧾', 'Accountable', 'Every change has a name and a time.', 'lemon'], ['🔒', 'Private', 'Your data is only for you and your officer.', 'lav']].map(([e, t, d, c]) => h('div', { class: `card hover tint-${c}` }, h('h3', {}, `${e} ${t}`), h('p', {}, d))))));
     main.append(h('section', { class: 'section alt' }, h('div', { class: 'container' }, h('h2', { class: 'title' }, 'What it does'), h('div', { class: 'grid g3' },
       [['Citizens', ['Register and log in', 'Submit requests with category, location, description and an optional photo', 'Track progress and reply to officers']], ['Officers', ['See requests for their department', 'Assign and update statuses', 'Comment and keep internal notes']], ['Administrators', ['Manage users, services and departments', 'Open vs resolved analytics', 'Reports, CSV export and audit log']]].map(([t, pts]) => h('div', { class: 'card' }, h('h3', {}, t), h('ul', { class: 'pointlist' }, pts.map((p) => h('li', {}, p)))))),
       h('h2', { class: 'title', style: null }, h('br'), 'Built with'), h('div', { class: 'row', style: null }, ['HTML5', 'CSS3', 'Vanilla JavaScript', 'Node.js', 'Express', 'MongoDB', 'Mongoose', 'Chart.js'].map((t) => h('span', { class: 'chip' }, t))))));
-    main.append(section('', h('div', { class: 'alert warn' }, h('strong', {}, 'Important: '), 'PSRS is an independent demonstration project. It is not affiliated with or endorsed by the Government of Kenya or eCitizen, uses no official logos and cannot issue real government documents.'), cta('Join in', 'Make a free account and try the whole journey.')));
+    main.append(section('', cta('Join in', 'Make a free account and try the whole journey.')));
   },
 
   async services() {
     const state = { q: new URLSearchParams(location.search).get('q') || '', department: '', page: 1, limit: 9 }; const results = h('div', {});
     const dept = h('select', { 'aria-label': 'Department', onchange: (e) => { state.department = e.target.value; state.page = 1; load(); } }, h('option', { value: '' }, 'All departments'));
-    main.append(pageHero('Services directory', 'Find the category that matches your problem. These are example request categories for demonstration.', 'step-service', 'Service categories'),
+    main.append(pageHero('Services directory', 'Browse available service categories and choose the one that fits your problem.', 'step-service', 'Service categories'),
       h('div', { class: 'container section' }, h('div', { class: 'filters' }, h('input', { type: 'search', value: state.q, placeholder: '🔍 Search services', 'aria-label': 'Search services', oninput: debounce((e) => { state.q = e.target.value.trim(); state.page = 1; load(); }) }), dept), results));
     get('/departments').then((r) => dept.append(...r.items.map((d) => h('option', { value: d._id }, d.name)))).catch(() => {});
     async function load() {
@@ -208,19 +207,18 @@ const pages = {
   }
 };
 
-const legal = (title, intro, sections) => () => main.append(h('div', { class: 'container section' }, h('div', { class: 'legal stack' }, h('h1', {}, title), h('p', { class: 'muted' }, 'Effective 18 October 2026 · Independent demonstration project'), h('p', {}, intro),
+const legal = (title, intro, sections) => () => main.append(h('div', { class: 'container section' }, h('div', { class: 'legal stack' }, h('h1', {}, title), h('p', { class: 'muted' }, 'Effective 18 October 2026'), h('p', {}, intro),
   h('div', { class: 'toc' }, sections.map(([t], i) => h('a', { class: 'chip', href: `#s${i + 1}` }, `${i + 1}. ${t}`))),
   sections.map(([t, body], i) => h('section', { id: `s${i + 1}`, class: 'card flat' }, h('h2', {}, `${i + 1}. ${t}`), body.map((p) => h('p', {}, p)))))));
 pages.terms = legal('Terms & Conditions', 'Please read these terms before creating an account or using PSRS. By registering or logging in you agree to them.', [
   ['Acceptance', ['By creating an account, logging in or using PSRS you agree to these Terms & Conditions and our Privacy Notice. If you do not agree, please do not use the service.']],
-  ['A demonstration project', ['PSRS is an independent demonstration. It is not affiliated with or endorsed by the Government of Kenya or eCitizen, uses no official logos and cannot issue real government documents.', 'Nothing submitted here is a real application, and no response is an official decision.']],
   ['Your account', ['Citizen accounts are created by registering. Staff accounts are created only by an administrator and sign in through the Staff portal.', 'Keep your password secret and tell us if you suspect misuse. You are responsible for activity under your account. Accounts that abuse the system may be suspended.']],
   ['Acceptable use', ['Give accurate information. Do not submit false, abusive or unlawful content, and do not try to access other people’s data or interfere with the system.']],
   ['Requests, photos and files', ['Only upload PDF, JPEG or PNG files that you have the right to share and that do not show other people without their consent.', 'Files are checked automatically and stored privately. We may remove content that breaks these terms.']],
   ['Staff access', ['Officers and administrators may view and process requests within their responsibilities. Their important actions are recorded in an audit log.']],
   ['Privacy', ['How we handle your information is explained in the Privacy Notice, which forms part of these terms.']],
-  ['Availability', ['The service is provided as is, may change or be unavailable at any time, and may be reset because it is a demonstration.']],
-  ['Limitation of liability', ['To the fullest extent allowed by law, the project owners are not liable for losses from using this demonstration. Do not rely on it for real public services.']],
+  ['Availability', ['The service is provided as is, may change or be unavailable at any time.']],
+  ['Limitation of liability', ['To the fullest extent allowed by law, the project owners are not liable for losses arising from use of the service.']],
   ['Changes to these terms', ['We may update these terms. Continued use after an update means you accept the new version.']],
   ['Contact', ['Questions about these terms? Visit the Help centre.']]]);
 pages.privacy = legal('Privacy Notice', 'This notice explains what PSRS collects, why, and who can see it.', [
@@ -229,7 +227,7 @@ pages.privacy = legal('Privacy Notice', 'This notice explains what PSRS collects
   ['Who can see it', ['You can see your own data. Officers see requests for their department. Administrators see account and request information for oversight. Reports and exports leave out personal details.']],
   ['Storage and security', ['Passwords are stored hashed. Attachments are stored privately and served only to authorised users. Important actions are recorded in an audit log.']],
   ['Cookies', ['PSRS uses one essential session cookie to keep you signed in. It does not use advertising or tracking cookies.']],
-  ['Keeping your data', ['This is a demonstration, so please do not enter real sensitive information. Data may be deleted when the demo is reset.']],
+  ['Keeping your data', ['Please do not enter sensitive information. Data may be deleted when the service is reset.']],
   ['Your choices', ['You can update your profile at any time and ask an administrator to suspend or remove your account.']],
   ['Children', ['PSRS is not intended for children under 13.']],
   ['Contact', ['Questions about privacy? Visit the Help centre.']]]);

@@ -1,7 +1,6 @@
 # Public Service Request System (PSRS)
 
-Mini eCitizen-style platform built for the ICT Intern recruitment examination (October 2026).
-**Independent demonstration project. Not affiliated with or endorsed by the Government of Kenya or eCitizen. It does not issue real government documents.**
+Public Service Request System built for the ICT Intern recruitment examination (October 2026).
 
 Citizens register, browse services, submit requests, attach documents, track progress and reply to officers. Officers process requests inside their department. Administrators manage users, services, departments, reports and audit logs.
 

@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 import { z } from 'zod';
-import { AuditLog, Department, Service, ServiceRequest, User } from '../models/index.js';
+import { AuditLog, Department, Notification, PasswordReset, Service, ServiceRequest, User } from '../models/index.js';
 import { requireRole } from '../middleware/auth.js';
 import { HttpError, checkId, csvCell, escapeRegex, pageQuery, paginate, parse, wrap } from '../utils/helpers.js';
 import { audit } from '../services/records.js';
@@ -66,7 +67,7 @@ r.get('/dashboard', wrap(async (_req, res) => {
 // ---- users ----
 r.get('/users', wrap(async (req, res) => {
   const q = parse(pageQuery.extend({ q: z.string().max(100).optional(), role: z.enum(['citizen', 'officer', 'admin']).optional(), accountStatus: z.enum(['active', 'suspended']).optional() }), req.query);
-  const filter = {};
+  const filter = { deletedAt: { $exists: false } };
   if (q.role) filter.role = q.role;
   if (q.accountStatus) filter.accountStatus = q.accountStatus;
   if (q.q) { const rx = new RegExp(escapeRegex(q.q), 'i'); filter.$or = [{ fullName: rx }, { email: rx }]; }
@@ -93,7 +94,7 @@ const notSelf = (req) => { if (String(req.params.id) === String(req.user._id)) t
 r.patch('/users/:id/role', wrap(async (req, res) => {
   const d = parse(z.object({ role: z.enum(['citizen', 'officer', 'admin']), department: z.string().length(24).nullable().optional() }), req.body);
   checkId(req.params.id); notSelf(req);
-  const u = await User.findById(req.params.id);
+  const u = await User.findOne({ _id: req.params.id, deletedAt: { $exists: false } });
   if (!u) throw new HttpError(404, 'User not found');
   if (d.role === 'officer' && !(d.department || u.department)) throw new HttpError(422, 'Officers need a department', { department: 'Required' });
   if (d.department && !(await Department.exists({ _id: d.department }))) throw new HttpError(422, 'Department not found', { department: 'Not found' });
@@ -107,7 +108,7 @@ r.patch('/users/:id/role', wrap(async (req, res) => {
 }));
 r.patch('/users/:id/department', wrap(async (req, res) => {
   const { department } = parse(z.object({ department: z.string().length(24) }), req.body);
-  const u = await User.findOne({ _id: checkId(req.params.id), role: 'officer' });
+  const u = await User.findOne({ _id: checkId(req.params.id), role: 'officer', deletedAt: { $exists: false } });
   if (!u) throw new HttpError(404, 'Officer not found');
   if (!(await Department.exists({ _id: department }))) throw new HttpError(422, 'Department not found', { department: 'Not found' });
   u.department = department; await u.save();
@@ -117,11 +118,47 @@ r.patch('/users/:id/department', wrap(async (req, res) => {
 r.patch('/users/:id/status', wrap(async (req, res) => {
   const { accountStatus } = parse(z.object({ accountStatus: z.enum(['active', 'suspended']) }), req.body);
   checkId(req.params.id); notSelf(req);
-  await User.updateOne({ _id: req.params.id }, { accountStatus });
-  const u = await User.findById(req.params.id);
+  await User.updateOne({ _id: req.params.id, deletedAt: { $exists: false } }, { accountStatus });
+  const u = await User.findOne({ _id: req.params.id, deletedAt: { $exists: false } });
   if (!u) throw new HttpError(404, 'User not found');
   await audit(req.user._id, 'user.status', 'User', u._id, { accountStatus });
   res.json({ success: true, user: u });
+}));
+
+r.delete('/users/:id', wrap(async (req, res) => {
+  checkId(req.params.id);
+  if (String(req.params.id) === String(req.user._id)) throw new HttpError(409, 'You cannot delete your own account');
+  const u = await User.findOne({ _id: req.params.id, deletedAt: { $exists: false } });
+  if (!u) throw new HttpError(404, 'User not found');
+  if (u.role === 'admin' && !(await User.exists({ _id: { $ne: u._id }, role: 'admin', accountStatus: 'active', deletedAt: { $exists: false } }))) {
+    throw new HttpError(409, 'You cannot delete the last active administrator');
+  }
+  const [citizenRequests, assignedRequests] = await Promise.all([
+    ServiceRequest.countDocuments({ citizen: u._id }),
+    ServiceRequest.countDocuments({ assignedOfficer: u._id, status: { $nin: CLOSED } })
+  ]);
+
+  await Promise.all([
+    ServiceRequest.updateMany({ assignedOfficer: u._id, status: { $nin: CLOSED } }, { $set: { assignedOfficer: null } }),
+    Notification.deleteMany({ recipient: u._id }),
+    PasswordReset.deleteMany({ user: u._id })
+  ]);
+  u.fullName = 'Deleted account';
+  u.email = `deleted-${u._id}@deleted.invalid`;
+  u.passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+  u.accountStatus = 'suspended';
+  u.emailVerified = false;
+  u.emailNotifications = false;
+  u.department = null;
+  u.failedLogins = 0;
+  u.lockUntil = undefined;
+  u.acceptedTermsAt = undefined;
+  u.deletedAt = new Date();
+  u.phone = undefined;
+  await u.save();
+
+  await audit(req.user._id, 'user.delete', 'User', u._id, { role: u.role, citizenRequests, assignedRequests });
+  res.json({ success: true, message: 'Account deleted. Existing request history has been retained with anonymized account details.' });
 }));
 
 // ---- reports ----
@@ -172,14 +209,14 @@ r.get('/audit-logs', wrap(async (req, res) => {
 
 r.patch('/users/:id/activate', wrap(async (req, res) => {
   checkId(req.params.id);
-  await User.updateOne({ _id: req.params.id }, { emailVerified: true });
-  const u = await User.findById(req.params.id);
+  await User.updateOne({ _id: req.params.id, deletedAt: { $exists: false } }, { emailVerified: true });
+  const u = await User.findOne({ _id: req.params.id, deletedAt: { $exists: false } });
   if (!u) throw new HttpError(404, 'User not found');
   await audit(req.user._id, 'user.activate', 'User', u._id);
   res.json({ success: true, user: u });
 }));
 r.post('/users/:id/resend-activation', wrap(async (req, res) => {
-  const u = await User.findOne({ _id: checkId(req.params.id), emailVerified: false });
+  const u = await User.findOne({ _id: checkId(req.params.id), emailVerified: false, deletedAt: { $exists: false } });
   if (!u) throw new HttpError(404, 'This user does not need activation');
   const base = appUrl(req);
   if (!isEmailConfigured() || !base) throw new HttpError(409, 'Email is not configured, so use "Activate now" instead');
