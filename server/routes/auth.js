@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import multer from 'multer';
 import { z } from 'zod';
 import { PasswordReset, User } from '../models/index.js';
 import { csrfToken, requireAuth } from '../middleware/auth.js';
@@ -126,6 +129,56 @@ r.patch('/me', requireAuth, wrap(async (req, res) => {
   if (d.emailNotifications !== undefined) req.user.emailNotifications = d.emailNotifications;
   await req.user.save();
   res.json({ success: true, user: req.user });
+}));
+
+// ---- profile picture ----
+const PP_DIR = path.resolve(process.env.UPLOAD_DIR || 'storage/uploads', 'profile-pictures');
+fs.mkdirSync(PP_DIR, { recursive: true });
+const PP_SIGS = [
+  { mime: 'image/jpeg', ext: 'jpg', test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  { mime: 'image/png', ext: 'png', test: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) }
+];
+const ppUpload = multer({
+  storage: multer.diskStorage({ destination: PP_DIR, filename: (_q, _f, cb) => cb(null, crypto.randomUUID() + '.img') }),
+  limits: { fileSize: 2 * 1048576, files: 1 }
+}).single('file');
+const ppCleanName = (n) => path.basename(String(n || 'file')).replace(/[^\w.\- ]+/g, '_').slice(0, 120) || 'file';
+
+r.post('/me/profile-picture', requireAuth, wrap(async (req, res, next) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'officer') throw new HttpError(403, 'Profile pictures are only available for staff accounts');
+  next();
+}), (req, res, next) => ppUpload(req, res, next), wrap(async (req, res) => {
+  const file = req.file;
+  if (!file) throw new HttpError(422, 'Choose an image to upload', { file: 'Required' });
+  const reject = async (msg) => { await fs.promises.unlink(file.path).catch(() => {}); throw new HttpError(422, msg, { file: msg }); };
+  const fd = await fs.promises.open(file.path, 'r'); const head = Buffer.alloc(8); await fd.read(head, 0, 8, 0); await fd.close();
+  const sig = PP_SIGS.find((s) => s.test(head));
+  if (!sig) await reject('Only JPEG and PNG images are allowed');
+  if (file.size > 2 * 1048576) await reject('Image must be 2 MB or smaller');
+  const old = req.user.profilePicture;
+  if (old) { const oldPath = path.join(PP_DIR, path.basename(old)); await fs.promises.unlink(oldPath).catch(() => {}); }
+  const url = `/api/v1/auth/me/profile-picture/${path.basename(file.filename)}`;
+  req.user.profilePicture = url; await req.user.save();
+  await audit(req.user._id, 'auth.profile_picture', 'User', req.user._id);
+  res.json({ success: true, user: req.user, url });
+}));
+
+r.delete('/me/profile-picture', requireAuth, wrap(async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'officer') throw new HttpError(403, 'Profile pictures are only available for staff accounts');
+  const old = req.user.profilePicture;
+  if (old) { const oldPath = path.join(PP_DIR, path.basename(old)); await fs.promises.unlink(oldPath).catch(() => {}); }
+  req.user.profilePicture = null; await req.user.save();
+  await audit(req.user._id, 'auth.profile_picture_delete', 'User', req.user._id);
+  res.json({ success: true, user: req.user });
+}));
+
+r.get('/me/profile-picture/:file', wrap(async (req, res) => {
+  const abs = path.join(PP_DIR, path.basename(req.params.file));
+  if (!abs.startsWith(PP_DIR + path.sep) || !fs.existsSync(abs)) throw new HttpError(404, 'Profile picture not found');
+  const ext = path.extname(abs).toLowerCase();
+  const mime = ext === '.png' ? 'image/png' : 'image/jpeg';
+  res.set({ 'Content-Type': mime, 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+  res.sendFile(abs);
 }));
 
 r.post('/change-password', requireAuth, wrap(async (req, res) => {

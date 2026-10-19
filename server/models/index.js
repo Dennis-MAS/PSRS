@@ -17,7 +17,9 @@ const userSchema = new Schema({
   emailVerified: { type: Boolean, default: true }, // false only while an activation email is pending
   emailNotifications: { type: Boolean, default: true },
   failedLogins: { type: Number, default: 0 },
-  lockUntil: Date
+  lockUntil: Date,
+  deletedAt: Date,
+  profilePicture: { type: String, default: null }
 }, { timestamps: true });
 userSchema.set('toJSON', { transform: (_d, r) => { delete r.passwordHash; delete r.failedLogins; delete r.lockUntil; delete r.__v; return r; } });
 

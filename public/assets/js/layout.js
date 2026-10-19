@@ -5,9 +5,14 @@ import { get, post, setCsrf } from './api.js';
 import { HOME, clear, h, toast } from './utilities.js';
 
 const KEY = 'psrs.user';
-export const cachedUser = () => { try { return JSON.parse(sessionStorage.getItem(KEY)); } catch { return null; } };
+export const cachedUser = () => { try { return JSON.parse(localStorage.getItem(KEY) || sessionStorage.getItem(KEY)); } catch { return null; } };
 export const cacheUser = (u) => {
-  try { if (u) sessionStorage.setItem(KEY, JSON.stringify({ _id: u._id, fullName: u.fullName, email: u.email, phone: u.phone, role: u.role })); else sessionStorage.removeItem(KEY); } catch { /* storage unavailable */ }
+  try {
+    if (u) {
+      const v = JSON.stringify({ _id: u._id, fullName: u.fullName, email: u.email, phone: u.phone, role: u.role, profilePicture: u.profilePicture || null });
+      localStorage.setItem(KEY, v); sessionStorage.setItem(KEY, v);
+    } else { localStorage.removeItem(KEY); sessionStorage.removeItem(KEY); }
+  } catch { /* storage unavailable */ }
 };
 export async function currentUser() {
   try { const r = await get('/auth/me'); setCsrf(r.csrfToken); cacheUser(r.user); return r.user; } catch { cacheUser(null); return null; }
@@ -20,8 +25,8 @@ export async function logout() {
 
 const NAV = {
   citizen: [['Dashboard', '/citizen/dashboard.html', '🏠'], ['Submit a request', '/citizen/submit-request.html', '✍️'], ['My requests', '/citizen/my-requests.html', '📋'], ['Notifications', '/citizen/notifications.html', '🔔'], ['Profile', '/citizen/profile.html', '🧑']],
-  officer: [['Dashboard', '/officer/dashboard.html', '🏠'], ['Requests', '/officer/requests.html', '📋'], ['Notifications', '/officer/notifications.html', '🔔']],
-  admin: [['Dashboard', '/admin/dashboard.html', '🏠'], ['Requests', '/admin/requests.html', '📋'], ['Services', '/admin/services.html', '🧰'], ['Departments', '/admin/departments.html', '🏢'], ['Users', '/admin/users.html', '👥'], ['Reports', '/admin/reports.html', '📊'], ['Audit logs', '/admin/audit-logs.html', '🧾'], ['Settings', '/admin/settings.html', '⚙️']]
+officer: [['Dashboard', '/officer/dashboard.html', '🏠'], ['Requests', '/officer/requests.html', '📋'], ['Notifications', '/officer/notifications.html', '🔔'], ['Profile', '/officer/profile.html', '🧑']],
+admin: [['Dashboard', '/admin/dashboard.html', '🏠'], ['Requests', '/admin/requests.html', '📋'], ['Services', '/admin/services.html', '🧰'], ['Departments', '/admin/departments.html', '🏢'], ['Users', '/admin/users.html', '👥'], ['Reports', '/admin/reports.html', '📊'], ['Audit logs', '/admin/audit-logs.html', '🧾'], ['Settings', '/admin/settings.html', '⚙️'], ['Profile', '/admin/profile.html', '🧑']]
 };
 const brand = () => h('a', { class: 'brand', href: '/' }, h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, 'MC'), h('span', { class: 'brand-name' }, 'Muranga County'));
 // Public settings (site name, switches) are fetched once per page and shared.
@@ -37,6 +42,11 @@ function applyBranding(s) {
   if (tagline) document.querySelectorAll('.tagline').forEach((e) => { e.textContent = tagline; });
 }
 const li = (t, href) => h('li', {}, h('a', { href }, t));
+export const avatarEl = (u) => {
+  const pic = u?.profilePicture;
+  if (pic) return h('img', { src: pic, alt: u.fullName });
+  return (u.fullName || '?')[0].toUpperCase();
+};
 
 function siteFooter() {
   return h('footer', { class: 'footer' }, h('div', { class: 'container' },
@@ -45,7 +55,7 @@ function siteFooter() {
       h('div', {}, h('h3', {}, 'Explore'), h('ul', { class: 'flist' }, li('Home', '/'), li('Services', '/services.html'), li('How it works', '/how-it-works.html'), li('Track a request', '/track.html'))),
       h('div', {}, h('h3', {}, 'Support'), h('ul', { class: 'flist' }, li('Help centre', '/help.html'), li('About PSRS', '/about.html'), li('Reset password', '/forgot-password.html'))),
       h('div', {}, h('h3', {}, 'Accounts & legal'), h('ul', { class: 'flist' }, li('Citizen login', '/login.html'), li('Register', '/register.html'), li('Staff portal', '/staff-login.html'), li('Terms & conditions', '/terms.html'), li('Privacy notice', '/privacy.html')))),
-    h('div', { class: 'legal-line' }, h('span', {}, '© 2026 ', h('span', { class: 'site-name' }, 'PSRS'), '. Independent demonstration project.'), h('span', {}, 'Not affiliated with or endorsed by the Government of Kenya or eCitizen. No real government documents are issued.'))));
+    h('div', { class: 'legal-line' }, h('span', {}, '© 2026 ', h('span', { class: 'site-name' }, 'PSRS')))));
 }
 
 // ---------- public pages ----------
@@ -99,8 +109,8 @@ export async function mountDashboard(roles, area) {
   const menu = h('button', { class: 'btn secondary sm menu', 'aria-label': 'Open menu', 'aria-controls': 'sidebar', 'aria-expanded': 'false', onclick: () => (side.classList.contains('open') ? close() : open()) }, '☰ Menu');
   const bell = h('a', { class: 'bell', href: `/${user.role}/notifications.html`, 'aria-label': 'Notifications', hidden: user.role === 'admin' }, '🔔');
   const main = h('main', { class: 'content', id: 'view' });
-  const top = h('header', { class: 'topbar' }, menu, h('span', { class: 'grow' }), bell, h('span', { class: 'avatar', 'aria-hidden': 'true' }, (user.fullName || '?')[0].toUpperCase()), h('span', { class: 'small uname' }, user.fullName), h('button', { class: 'btn secondary sm', onclick: logout }, 'Log out'));
-  const foot = h('footer', { class: 'dash-foot' }, h('span', {}, '© 2026 PSRS · Independent demonstration project, not affiliated with the Government of Kenya or eCitizen.'), h('span', {}, h('a', { href: '/terms.html' }, 'Terms'), ' · ', h('a', { href: '/privacy.html' }, 'Privacy'), ' · ', h('a', { href: '/help.html' }, 'Help')));
+  const top = h('header', { class: 'topbar' }, menu, h('span', { class: 'grow' }), bell, h('span', { class: 'avatar', 'aria-hidden': 'true' }, avatarEl(user)), h('span', { class: 'small uname' }, user.fullName), h('button', { class: 'btn secondary sm', onclick: logout }, 'Log out'));
+  const foot = h('footer', { class: 'dash-foot' }, h('span', {}, '© 2026 PSRS'), h('span', {}, 'Made with ', h('span', { 'aria-label': 'love' }, '❤️'), ' Dennis Muraya Gichuki'), h('span', {}, h('a', { href: '/terms.html' }, 'Terms'), ' · ', h('a', { href: '/privacy.html' }, 'Privacy'), ' · ', h('a', { href: '/help.html' }, 'Help')));
   const app = document.getElementById('app'); clear(app); app.removeAttribute('aria-busy');
   app.append(h('div', { class: 'app' }, side, scrim, h('div', { class: 'shell' }, top, main, foot)));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
@@ -111,7 +121,7 @@ export async function mountDashboard(roles, area) {
     if (note) top.after(h('div', { class: 'banner' }, note));
   });
   if (user.role !== 'admin') get('/notifications?limit=1&unread=1').then((r) => { if (r.unread) bell.append(h('span', { class: 'count' }, r.unread > 99 ? '99+' : r.unread)); }).catch(() => {});
-  if (user === cached) currentUser().then((u) => { if (!u) toLogin(); else if (!roles.includes(u.role)) location.replace(HOME[u.role]); else Object.assign(user, u); }); // confirm the session in the background
+  if (user === cached) currentUser().then((u) => { if (!u) toLogin(); else if (!roles.includes(u.role)) location.replace(HOME[u.role]); else { Object.assign(user, u); const av = top.querySelector('.avatar'); if (av) av.replaceChildren(avatarEl(u)); } }); // confirm the session in the background
   return { main, user };
 }
 export { toast };

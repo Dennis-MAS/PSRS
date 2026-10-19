@@ -1,6 +1,6 @@
-import { downloadFile, get, patch, post, put, qs } from './api.js';
+import { api, downloadFile, get, patch, post, put, qs } from './api.js';
 import { switchField, STATUS_LABEL, alertBox, clear, clearErrors, confirmDialog, debounce, empty, field, fmtDate, h, loading, openModal, pager, pill, showErrors, statusBadge, toast, withBusy } from './utilities.js';
-import { mountDashboard } from './layout.js';
+import { mountDashboard, avatarEl, cacheUser } from './layout.js';
 import { renderNotifications, renderRequestDetail } from './requests.js';
 
 const area = document.body.dataset.area; const page = document.body.dataset.page;
@@ -172,7 +172,8 @@ const pages = {
       try { const r = await get('/admin/users' + qs(state)); clear(host);
         host.append(table(['Name', 'Email', 'Role', 'Department', 'Status', ''], r.items.map((u) => h('tr', {}, td(u.fullName), td(u.email), td(u.role), td(u.department?.name || '-'), td(pill(u.accountStatus), u.emailVerified === false ? [' ', h('span', { class: 'badge b-warn' }, 'Not activated')] : null),
           h('td', { class: 'actions' }, String(u._id) === String(user._id) ? h('span', { class: 'muted small' }, 'You') : [u.emailVerified === false ? [h('button', { class: 'btn secondary sm', onclick: async () => { try { await patch(`/admin/users/${u._id}/activate`); toast('Account activated', 'success'); load(); } catch (e) { toast(e.message, 'error'); } } }, 'Activate now'), ' ', h('button', { class: 'btn secondary sm', onclick: async (e) => { try { await withBusy(e.currentTarget, () => post(`/admin/users/${u._id}/resend-activation`)); toast('Activation email sent', 'success'); } catch (err) { toast(err.message, 'error'); } } }, 'Resend email'), ' '] : null, h('button', { class: 'btn secondary sm', onclick: () => roleModal(u) }, 'Change role'), ' ',
-            h('button', { class: `btn sm ${u.accountStatus === 'active' ? 'danger' : ''}`, onclick: async () => { const next = u.accountStatus === 'active' ? 'suspended' : 'active'; if (next === 'suspended' && !(await confirmDialog(`Suspend ${u.fullName}? They will not be able to log in.`, { danger: true, confirmText: 'Suspend' }))) return; try { await patch(`/admin/users/${u._id}/status`, { accountStatus: next }); load(); } catch (e) { toast(e.message, 'error'); } } }, u.accountStatus === 'active' ? 'Suspend' : 'Reactivate')])))),
+            h('button', { class: `btn sm ${u.accountStatus === 'active' ? 'danger' : ''}`, onclick: async () => { const next = u.accountStatus === 'active' ? 'suspended' : 'active'; if (next === 'suspended' && !(await confirmDialog(`Suspend ${u.fullName}? They will not be able to log in.`, { danger: true, confirmText: 'Suspend' }))) return; try { await patch(`/admin/users/${u._id}/status`, { accountStatus: next }); load(); } catch (e) { toast(e.message, 'error'); } } }, u.accountStatus === 'active' ? 'Suspend' : 'Reactivate'), ' ',
+            h('button', { class: 'btn sm danger', onclick: async (e) => { const btn = e.currentTarget; if (!(await confirmDialog(`Delete ${u.fullName}'s account? They will no longer be able to sign in. Existing requests and history will be kept with the account details anonymized, and active assignments will be cleared.`, { danger: true, confirmText: 'Delete account' }))) return; try { await withBusy(btn, () => api(`/admin/users/${u._id}`, { method: 'DELETE' })); toast('Account deleted; request history retained anonymously', 'success'); load(); } catch (err) { toast(err.message, 'error'); } } }, 'Delete account')])))),
           pager(r.pagination, (p) => { state.page = p; load(); }));
       } catch (e) { clear(host).append(alertBox(e.message)); }
     }
@@ -252,6 +253,44 @@ const pages = {
       try { await withBusy(f.querySelector('button[type=submit]'), () => put('/admin/settings', body)); toast('Settings saved', 'success'); } catch (err) { showErrors(f, err); }
     });
     main.append(f); checkStatus();
+  },
+  async profile() {
+    main.append(title('Profile'));
+    let me = user; try { me = (await get('/auth/me')).user; } catch { /* fall back */ }
+    const f = h('form', { class: 'card', novalidate: true }, h('h3', {}, 'Your details'), field({ label: 'Full name', name: 'fullName', required: true, value: me.fullName }), field({ label: 'Email', name: 'email', value: me.email, disabled: true, hint: 'Email cannot be changed.' }), h('button', { class: 'btn', type: 'submit' }, 'Save changes'));
+    f.addEventListener('submit', async (e) => { e.preventDefault(); clearErrors(f); try { const r = await withBusy(f.querySelector('button'), () => patch('/auth/me', { fullName: f.elements.fullName.value })); cacheUser(r.user); me = r.user; const av = document.querySelector('.topbar .avatar'); if (av) av.replaceChildren(avatarEl(r.user)); toast('Profile saved', 'success'); } catch (err) { showErrors(f, err); } });
+    const p = h('form', { class: 'card', novalidate: true }, h('h3', {}, 'Change password'), field({ label: 'Current password', name: 'currentPassword', type: 'password', required: true, autocomplete: 'current-password' }), field({ label: 'New password', name: 'newPassword', type: 'password', required: true, autocomplete: 'new-password', hint: 'At least 8 characters with upper case, lower case and a number.' }), h('button', { class: 'btn', type: 'submit' }, 'Change password'));
+    p.addEventListener('submit', async (e) => { e.preventDefault(); clearErrors(p); try { await withBusy(p.querySelector('button'), () => post('/auth/change-password', { currentPassword: p.elements.currentPassword.value, newPassword: p.elements.newPassword.value })); toast('Password changed', 'success'); p.reset(); } catch (err) { showErrors(f, err); } });
+    main.append(h('div', { class: 'grid g2' }, f, p));
+    // Profile picture (staff only)
+    if (me.role === 'admin' || me.role === 'officer') {
+const pp = h('div', { class: 'card stack' }, h('h3', {}, 'Profile picture'), h('p', { class: 'small muted' }, 'Shown in your header and sidebar. JPEG or PNG, up to 2 MB.'),
+        h('div', { class: 'row', style: null }, h('div', { class: 'avatar lg', id: 'pp-preview' }, me.profilePicture ? h('img', { src: me.profilePicture, alt: me.fullName }) : (me.fullName || '?')[0].toUpperCase())),
+        h('input', { type: 'file', id: 'pp-file', accept: 'image/jpeg,image/png', hidden: true, 'aria-label': 'Choose profile picture' }),
+        h('label', { class: 'btn secondary sm', for: 'pp-file' }, 'Choose image'),
+        h('span', { id: 'pp-msg', class: 'small muted' }),
+        me.profilePicture ? h('button', { class: 'btn sm danger', id: 'pp-remove' }, 'Remove') : null);
+      main.append(pp);
+      const file = pp.querySelector('#pp-file');
+      const msg = pp.querySelector('#pp-msg');
+      const preview = pp.querySelector('.avatar');
+      const apply = (u) => { cacheUser(u); me = u; const top = document.querySelector('.topbar .avatar'); if (top) top.replaceChildren(avatarEl(u)); if (preview) preview.replaceChildren(avatarEl(u)); };
+      file.onchange = async () => {
+        if (!file.files.length) return;
+        const form = new FormData(); form.append('file', file.files[0]);
+        msg.textContent = 'Uploading…';
+        try {
+          const r = await api('/auth/me/profile-picture', { method: 'POST', form });
+          apply(r.user); msg.textContent = 'Profile picture updated'; toast('Profile picture updated', 'success');
+        } catch (err) { msg.textContent = err.message; toast(err.message, 'error'); }
+        file.value = '';
+      };
+      const rem = pp.querySelector('#pp-remove');
+      if (rem) rem.onclick = async () => {
+        try { const r = await api('/auth/me/profile-picture', { method: 'DELETE' }); apply(r.user); msg.textContent = 'Profile picture removed'; toast('Profile picture removed', 'success'); }
+        catch (err) { msg.textContent = err.message; toast(err.message, 'error'); }
+      };
+    }
   }
 };
 
