@@ -25,6 +25,22 @@ database/ seed.js        tests/ psrs.test.js        storage/ private uploads
 ```
 Conventions: routes only parse input and call shared services; every request is validated with Zod; authorization lives in middleware and in database query scopes (`requestScope`); the frontend never uses `innerHTML`.
 
+## How the system is built
+
+The system is a **Public Service Request System (PSRS)** — a full-stack web application for citizens to submit and track public service requests (potholes, water issues, garbage, etc.), for officers to process them inside their department, and for administrators to oversee everything.
+
+**Architecture:** A Node.js/Express server (REST API at `/api/v1`) with a MongoDB (Mongoose) database, plus a static front end of plain HTML/CSS/vanilla JavaScript served from the same server. There is no build step — the server serves the pages and assets directly from `public/`.
+
+**Request flow:** Every page loads from the Express server (`http://localhost:3000`). The front end calls the API with `fetch` and a CSRF token (`api.js`), while shared UI helpers (`utilities.js`, `layout.js`) build the DOM safely with `textContent` (never `innerHTML`). Routes only parse input and call shared services; every request is validated with Zod; authorization lives in middleware and in database query scopes.
+
+**Data model:** `User` (role, department) · `Department` · `Service` (→ Department) · `ServiceRequest` (→ citizen, Service, Department, assignedOfficer) · `RequestStatusHistory` · `RequestComment` (internal/citizen visibility) · `RequestAttachment` · `Notification` · `AuditLog` · `Counter` (atomic reference numbers) · `PasswordReset` · `Setting`.
+
+**Workflow engine:** `server/services/workflow.js` enforces `SUBMITTED → UNDER_REVIEW | CANCELLED | REJECTED`, `UNDER_REVIEW → IN_PROGRESS | AWAITING_INFORMATION | REJECTED`, `AWAITING_INFORMATION → UNDER_REVIEW`, `IN_PROGRESS → AWAITING_INFORMATION | RESOLVED | REJECTED`. Comments are mandatory for awaiting-information, resolved and rejected states. A citizen reply to an information request moves the request back to `UNDER_REVIEW`.
+
+**Cross-cutting concerns:** bcrypt (cost 12) password hashing, account lockout after 5 failures plus rate limits, HTTP-only SameSite session cookies (`Secure` in production) with session regeneration on login, synchroniser-token CSRF, Helmet + strict CSP (no inline scripts/styles, no CDNs), private uploads validated by file signature and served only through authorised endpoints, CSV formula-injection neutralised, and an audit log for every admin action.
+
+**Bonus features:** Public tracker by reference number (no personal data), officer portal with departmental access, internal notes, in-app notifications, audit log, CSV export, request summary download, password reset, account lockout, duplicate-submission protection, and a site announcement banner.
+
 ## Quick start
 **Fastest (no MongoDB install):** `npm install` then `npm run demo`, and open <http://localhost:3000>. This starts a temporary in-memory database with demo data (it needs internet the first time to download a MongoDB binary, and data is lost when you stop it).
 
@@ -39,7 +55,7 @@ npm test                      # uses MONGODB_URI_TEST (a separate database, whic
 ```
 **MongoDB:** install Community Server locally (`mongodb://127.0.0.1:27017/psrs`) or create a free MongoDB Atlas cluster, add your IP to the access list, and put the `mongodb+srv://...` string in `MONGODB_URI`.
 
-Demo accounts after seeding (password `Demo#2026pass`, or `SEED_ADMIN_PASSWORD`): `admin@psrs.test`, `officer1@psrs.test` and `officer4@psrs.test` (Public Works), `officer2@psrs.test` and `officer5@psrs.test` (Water and Sanitation), `officer3@psrs.test` and `officer6@psrs.test` (County Services), `citizen1@psrs.test`.
+Demo accounts after seeding (password `ChangeMe` for all accounts, configurable via `SEED_PASSWORD`): `admin@psrs.test`, `officer1@psrs.test` and `officer4@psrs.test` (Public Works), `officer2@psrs.test` and `officer5@psrs.test` (Water and Sanitation), `officer3@psrs.test` and `officer6@psrs.test` (County Services), `citizen1@psrs.test`.
 Seeding refuses to run when `NODE_ENV=production` unless `ALLOW_SEED=true`. The app works on an empty database; create the first admin by seeding or by promoting a user directly in the database.
 
 ## Environment variables

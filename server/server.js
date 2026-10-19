@@ -18,7 +18,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.MONGODB_URI) {
 await connectDatabase(uri);
 
 async function seedDemoUsers() {
-  const password = process.env.SEED_ADMIN_PASSWORD || 'Demo#2026pass';
+  const password = process.env.SEED_PASSWORD || 'ChangeMe';
   const passwordHash = await bcrypt.hash(password, 12);
   const now = new Date();
   const deptData = [

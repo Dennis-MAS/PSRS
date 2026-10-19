@@ -9,7 +9,7 @@ if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') 
   console.error('Refusing to seed in production. Set ALLOW_SEED=true only if you really intend to.'); process.exit(1);
 }
 await connectDatabase(process.env.MONGODB_URI);
-const PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Demo#2026pass';
+const PASSWORD = process.env.SEED_PASSWORD || 'ChangeMe';
 const passwordHash = await bcrypt.hash(PASSWORD, 12);
 
 await Notification.deleteMany({});
