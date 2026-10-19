@@ -71,4 +71,4 @@ export async function changeStatus(request, newStatus, actor, comment) {
   return updated;
 }
 
-export const staffForDepartment = (deptId) => User.find({ role: 'officer', department: deptId, accountStatus: 'active' }).select('fullName email');
+export const staffForDepartment = (deptId) => User.find({ role: 'officer', department: deptId, accountStatus: 'active' }).select('fullName email department').populate('department', 'name').sort({ fullName: 1 });

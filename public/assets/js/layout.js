@@ -23,17 +23,18 @@ const NAV = {
   officer: [['Dashboard', '/officer/dashboard.html', '🏠'], ['Requests', '/officer/requests.html', '📋'], ['Notifications', '/officer/notifications.html', '🔔']],
   admin: [['Dashboard', '/admin/dashboard.html', '🏠'], ['Requests', '/admin/requests.html', '📋'], ['Services', '/admin/services.html', '🧰'], ['Departments', '/admin/departments.html', '🏢'], ['Users', '/admin/users.html', '👥'], ['Reports', '/admin/reports.html', '📊'], ['Audit logs', '/admin/audit-logs.html', '🧾'], ['Settings', '/admin/settings.html', '⚙️']]
 };
-const brand = () => h('a', { class: 'brand', href: '/' }, h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, 'PS'), h('span', { class: 'brand-name' }, 'PSRS'));
+const brand = () => h('a', { class: 'brand', href: '/' }, h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, 'MC'), h('span', { class: 'brand-name' }, 'Muranga County'));
 // Public settings (site name, switches) are fetched once per page and shared.
 let settingsPromise;
 export const publicSettings = () => (settingsPromise ||= get('/settings/public').then((r) => r.settings).catch(() => ({})));
 const initials = (n) => (n.trim().split(/\s+/).length > 1 ? n.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('') : n.trim().slice(0, 2)).toUpperCase();
 function applyBranding(s) {
-  if (!s.siteName) return;
-  document.querySelectorAll('.brand-name, .site-name').forEach((e) => { e.textContent = s.siteName; });
-  document.querySelectorAll('.brand-mark').forEach((e) => { e.textContent = initials(s.siteName); });
-  document.title = document.title.replace(/·\s.*$/, `· ${s.siteName}`);
-  if (s.tagline) document.querySelectorAll('.tagline').forEach((e) => { e.textContent = s.tagline; });
+  const siteName = s.siteName || s.countyName || 'Muranga County';
+  const tagline = s.tagline || 'Muranga County Public Services, Made Simpler.';
+  document.querySelectorAll('.brand-name, .site-name').forEach((e) => { e.textContent = siteName; });
+  document.querySelectorAll('.brand-mark').forEach((e) => { e.textContent = initials(siteName); });
+  document.title = document.title.replace(/·\s.*$/, `· ${siteName}`);
+  if (tagline) document.querySelectorAll('.tagline').forEach((e) => { e.textContent = tagline; });
 }
 const li = (t, href) => h('li', {}, h('a', { href }, t));
 

@@ -40,15 +40,22 @@ r.get('/requests/:id/assignees', wrap(async (req, res) => {
 }));
 
 r.patch('/requests/:id/assign', wrap(async (req, res) => {
-  const { officerId } = parse(z.object({ officerId: z.string().length(24) }), req.body);
+  const { officerId } = parse(z.object({ officerId: z.string().length(24).nullable() }), req.body);
   const doc = await loadAuthorizedRequest(checkId(req.params.id), req.user);
   if (['RESOLVED', 'REJECTED', 'CANCELLED'].includes(doc.status)) throw new HttpError(409, 'Closed requests cannot be reassigned');
-  const officer = await User.findOne({ _id: officerId, role: 'officer', accountStatus: 'active' });
-  if (!officer || String(officer.department) !== String(doc.department)) throw new HttpError(422, 'Choose an active officer from the responsible department', { officerId: 'Not allowed' });
-  doc.assignedOfficer = officer._id; await doc.save();
-  await notify(officer._id, doc._id, 'Request assigned to you', `${doc.referenceNumber} was assigned to you.`, 'emailOnAssign', { reference: doc.referenceNumber, title: doc.title });
-  await notify(doc.citizen, doc._id, 'Officer assigned', `${doc.referenceNumber} is now being handled by an officer.`);
-  await audit(req.user._id, 'request.assign', 'ServiceRequest', doc._id, { officer: officer._id });
+  if (officerId) {
+    const officer = await User.findOne({ _id: officerId, role: 'officer', accountStatus: 'active' });
+    if (!officer || String(officer.department) !== String(doc.department)) throw new HttpError(422, 'Choose an active officer from the responsible department', { officerId: 'Not allowed' });
+    doc.assignedOfficer = officer._id;
+    await doc.save();
+    await notify(officer._id, doc._id, 'Request assigned to you', `${doc.referenceNumber} was assigned to you.`, 'emailOnAssign', { reference: doc.referenceNumber, title: doc.title });
+    await notify(doc.citizen, doc._id, 'Officer assigned', `${doc.referenceNumber} is now being handled by an officer.`);
+    await audit(req.user._id, 'request.assign', 'ServiceRequest', doc._id, { officer: officer._id });
+  } else {
+    doc.assignedOfficer = null;
+    await doc.save();
+    await audit(req.user._id, 'request.unassign', 'ServiceRequest', doc._id);
+  }
   res.json({ success: true, request: doc });
 }));
 

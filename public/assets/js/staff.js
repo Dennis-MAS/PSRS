@@ -28,14 +28,52 @@ function staffRequests(host, { limit = 10 } = {}) {
     try {
       const r = await get('/officer/requests' + qs(state)); clear(results);
       if (!r.items.length) return results.append(empty('No requests found', 'Adjust the filters or check back later.'));
-      results.append(table(['Reference', 'Request', 'Service', 'Department', 'Officer', 'Submitted', 'Status', ''], r.items.map((x) => h('tr', {}, td(x.referenceNumber), td(x.title), td(x.service?.name), td(x.department?.name), td(x.assignedOfficer?.fullName || 'Unassigned'), td(fmtDate(x.submittedAt)), td(statusBadge(x.status)),
+      results.append(table(['Reference', 'Request', 'Service', 'Department', 'Officer', 'Submitted', 'Status', ''], r.items.map((x) => h('tr', {}, td(x.referenceNumber), td(x.title), td(x.service?.name), td(x.department?.name), 
+        user.role === 'admin' && !['RESOLVED', 'REJECTED', 'CANCELLED'].includes(x.status) 
+          ? td(h('div', { class: 'row' }, 
+              h('span', { id: `off-${x._id}-lbl`, class: 'small' }, x.assignedOfficer?.fullName || 'Unassigned'),
+              h('button', { class: 'btn secondary xs', onclick: () => inlineAssign(x, results, reload) }, 'Assign...')
+            ))
+          : td(x.assignedOfficer?.fullName || 'Unassigned'), 
+        td(fmtDate(x.submittedAt)), td(statusBadge(x.status)),
         h('td', { class: 'actions' }, h('a', { class: 'btn secondary sm', href: `/officer/request-details.html?id=${x._id}` }, 'Open'))))), pager(r.pagination, (p) => { state.page = p; load(); }));
     } catch (e) { clear(results).append(alertBox(e.message)); }
   }
   load();
 }
 
-// ---------- charts ----------
+function inlineAssign(req, host, done) {
+  const dlg = openModal(`Assign ${req.referenceNumber}`, h('div', { class: 'stack' },
+    h('div', { class: 'field' }, h('label', { for: `sel-${req._id}` }, 'Officer'), h('select', { id: `sel-${req._id}` }, h('option', { value: '' }, 'Loading...'))),
+    h('div', { class: 'row' }, h('button', { class: 'btn', id: `ok-${req._id}` }, 'Assign/Unassign'), h('button', { class: 'btn secondary', id: `cl-${req._id}` }, 'Cancel')),
+    h('div', { id: `msg-${req._id}`, class: 'small muted' })
+  ));
+  const sel = dlg.querySelector('select');
+  const ok = dlg.querySelector(`#ok-${req._id}`);
+  const cl = dlg.querySelector(`#cl-${req._id}`);
+  const msg = dlg.querySelector(`#msg-${req._id}`);
+  ok.disabled = true;
+  get(`/officer/requests/${req._id}/assignees`).then(({ items }) => {
+    clear(sel).append(h('option', { value: '' }, items.length ? 'Unassigned' : 'No officers available'));
+    items.forEach((o) => sel.append(h('option', { value: o._id, selected: String(o._id) === String(req.assignedOfficer?._id) }, `${o.fullName} (${o.department?.name || 'Department not set'})`)));
+    ok.disabled = false;
+  }).catch(() => { sel.innerHTML = '<option value="">Failed to load</option>'; ok.disabled = false; });
+  cl.onclick = () => dlg.close();
+  ok.onclick = async () => {
+    msg.textContent = '';
+    try {
+      await withBusy(ok, () => patch(`/officer/requests/${req._id}/assign`, { officerId: sel.value || null }));
+      toast(sel.value ? 'Assigned' : 'Unassigned', 'success');
+      dlg.close();
+      done();
+      const lbl = document.getElementById(`off-${req._id}-lbl`);
+      if (lbl) lbl.textContent = sel.value ? (sel.selectedOptions[0]?.textContent || 'Assigned') : 'Unassigned';
+    } catch (e) {
+      msg.textContent = e.message;
+      toast(e.message, 'error');
+    }
+  };
+}
 const loadChart = () => (window.Chart ? Promise.resolve() : new Promise((res, rej) => { const s = Object.assign(document.createElement('script'), { src: '/vendor/chart/chart.umd.js', onload: res, onerror: rej }); document.head.append(s); }));
 const COLORS = { SUBMITTED: '#2563eb', UNDER_REVIEW: '#d97706', AWAITING_INFORMATION: '#f59e0b', IN_PROGRESS: '#0891b2', RESOLVED: '#16a34a', REJECTED: '#dc2626', CANCELLED: '#6b7280' };
 const chartCard = (t, cls = '') => { const c = h('canvas', { 'aria-label': t, role: 'img' }); return [h('div', { class: `card ${cls}` }, h('h3', {}, t), h('div', { class: 'chart-box' }, c)), c]; };

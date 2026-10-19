@@ -92,10 +92,13 @@ function uploadForm(id, done) {
 
 function assignForm(id, r, done) {
   const sel = h('select', { id: 'assignee', name: 'officerId' }, h('option', { value: '' }, 'Loading officers...'));
-  get(`/officer/requests/${id}/assignees`).then(({ items }) => { clear(sel).append(h('option', { value: '' }, 'Choose officer'), items.map((o) => h('option', { value: o._id, selected: String(o._id) === String(r.assignedOfficer?._id) }, o.fullName))); }).catch(() => {});
-  const f = h('form', { novalidate: true }, h('div', { class: 'field', 'data-field': 'officerId' }, h('label', { for: 'assignee' }, 'Assign to officer'), sel, h('div', { class: 'field-error' })), h('button', { class: 'btn secondary', type: 'submit', disabled: ['RESOLVED', 'REJECTED', 'CANCELLED'].includes(r.status) }, 'Assign'));
-  f.addEventListener('submit', async (e) => { e.preventDefault(); clearErrors(f); if (!sel.value) return showErrors(f, { message: 'Choose an officer', fields: { officerId: 'Required' } });
-    try { await withBusy(f.querySelector('button'), () => patch(`/officer/requests/${id}/assign`, { officerId: sel.value })); toast('Request assigned', 'success'); done(); } catch (err) { showErrors(f, err); } });
+  get(`/officer/requests/${id}/assignees`).then(({ items }) => { 
+    clear(sel).append(h('option', { value: '' }, items.length ? 'Unassigned' : 'No officers available'), 
+      items.map((o) => h('option', { value: o._id, selected: String(o._id) === String(r.assignedOfficer?._id) }, `${o.fullName} (${o.department?.name || 'Department not set'})`)));
+  }).catch((e) => { clear(sel).append(h('option', { value: '' }, 'Failed to load officers')); });
+  const f = h('form', { novalidate: true }, h('div', { class: 'field', 'data-field': 'officerId' }, h('label', { for: 'assignee' }, 'Assign to officer'), sel, h('div', { class: 'field-error' })), h('button', { class: 'btn secondary', type: 'submit', disabled: ['RESOLVED', 'REJECTED', 'CANCELLED'].includes(r.status) }, 'Assign/Unassign'));
+  f.addEventListener('submit', async (e) => { e.preventDefault(); clearErrors(f); 
+    try { await withBusy(f.querySelector('button'), () => patch(`/officer/requests/${id}/assign`, { officerId: sel.value || null })); toast(sel.value ? 'Request assigned' : 'Request unassigned', 'success'); done(); } catch (err) { showErrors(f, err); } });
   return f;
 }
 

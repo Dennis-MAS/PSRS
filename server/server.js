@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import MongoStore from 'connect-mongo';
 import { connectDatabase } from './config/database.js';
 import { createApp } from './app.js';
-import { User, Setting } from './models/index.js';
+import { User, Setting, Department } from './models/index.js';
 import { DEFS } from './services/settings.js';
 
 const port = Number(process.env.PORT || 3000);
@@ -21,12 +21,23 @@ async function seedDemoUsers() {
   const password = process.env.SEED_ADMIN_PASSWORD || 'Demo#2026pass';
   const passwordHash = await bcrypt.hash(password, 12);
   const now = new Date();
+  const deptData = [
+    ['Public Works', 'Department responsible for roads, street infrastructure, and public works maintenance.'],
+    ['Water and Sanitation', 'Department responsible for drainage, water services, waste management, and sanitation.'],
+    ['County Services', 'Department responsible for public amenities, community services, and health-related complaints.']
+  ];
+  const depts = {};
+  for (const [name, description] of deptData) {
+    depts[name] = await Department.findOneAndUpdate({ name }, { name, description, contactInformation: 'service@county.gov', status: 'active' }, { upsert: true, returnDocument: 'after' });
+  }
   const users = [
     { fullName: 'Demo Administrator', email: 'admin@psrs.test', role: 'admin', department: null },
-    { fullName: 'Amina Officer', email: 'officer1@psrs.test', role: 'officer', department: null },
-    { fullName: 'Brian Officer', email: 'officer2@psrs.test', role: 'officer', department: null },
-    { fullName: 'Cynthia Officer', email: 'officer3@psrs.test', role: 'officer', department: null },
-    { fullName: 'Dan Officer', email: 'officer4@psrs.test', role: 'officer', department: null },
+    { fullName: 'Amina Officer', email: 'officer1@psrs.test', role: 'officer', department: depts['Public Works']._id },
+    { fullName: 'Brian Officer', email: 'officer2@psrs.test', role: 'officer', department: depts['Water and Sanitation']._id },
+    { fullName: 'Cynthia Officer', email: 'officer3@psrs.test', role: 'officer', department: depts['County Services']._id },
+    { fullName: 'Dan Officer', email: 'officer4@psrs.test', role: 'officer', department: depts['Public Works']._id },
+    { fullName: 'Eunice Officer', email: 'officer5@psrs.test', role: 'officer', department: depts['Water and Sanitation']._id },
+    { fullName: 'Felix Officer', email: 'officer6@psrs.test', role: 'officer', department: depts['County Services']._id },
     { fullName: 'Wanjiru Citizen', email: 'citizen1@psrs.test', role: 'citizen', department: null },
     { fullName: 'Otieno Citizen', email: 'citizen2@psrs.test', role: 'citizen', department: null },
     { fullName: 'Fatuma Citizen', email: 'citizen3@psrs.test', role: 'citizen', department: null },

@@ -40,7 +40,7 @@ npm test                      # uses MONGODB_URI_TEST (a separate database, whic
 ```
 **MongoDB:** install Community Server locally (`mongodb://127.0.0.1:27017/psrs`) or create a free MongoDB Atlas cluster, add your IP to the access list, and put the `mongodb+srv://...` string in `MONGODB_URI`.
 
-Demo accounts after seeding (password `Demo#2026pass`, or `SEED_ADMIN_PASSWORD`): `admin@psrs.test`, `officer1@psrs.test` (County Services), `officer2@psrs.test` (Civil Registration), `officer3@psrs.test` (Public Works), `officer4@psrs.test` (Water and Sanitation), `citizen1@psrs.test`.
+Demo accounts after seeding (password `Demo#2026pass`, or `SEED_ADMIN_PASSWORD`): `admin@psrs.test`, `officer1@psrs.test` and `officer4@psrs.test` (Public Works), `officer2@psrs.test` and `officer5@psrs.test` (Water and Sanitation), `officer3@psrs.test` and `officer6@psrs.test` (County Services), `citizen1@psrs.test`.
 Seeding refuses to run when `NODE_ENV=production` unless `ALLOW_SEED=true`. The app works on an empty database; create the first admin by seeding or by promoting a user directly in the database.
 
 ## Environment variables

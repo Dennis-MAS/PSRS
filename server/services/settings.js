@@ -2,8 +2,9 @@
 import { Setting } from '../models/index.js';
 
 export const DEFS = {
-  siteName: { type: 'string', def: 'PSRS' },
-  tagline: { type: 'string', def: 'Public Services, Made Simpler.' },
+  siteName: { type: 'string', def: 'Muranga County' },
+  tagline: { type: 'string', def: 'Muranga County Public Services, Made Simpler.' },
+  countyName: { type: 'string', def: 'Muranga County' },
   supportEmail: { type: 'string', def: '' },
   supportPhone: { type: 'string', def: '' },
   announcement: { type: 'string', def: '' },
@@ -49,7 +50,7 @@ export async function saveSettings(patch) {
 export async function publicSettings() {
   const s = await getSettings();
   return {
-    siteName: s.siteName, tagline: s.tagline, supportEmail: s.supportEmail, supportPhone: s.supportPhone, announcement: s.announcement,
+    siteName: s.siteName, tagline: s.tagline, countyName: s.countyName || s.siteName || 'Muranga County', supportEmail: s.supportEmail, supportPhone: s.supportPhone, announcement: s.announcement,
     registrationOpen: s.registrationOpen, maintenanceMode: s.maintenanceMode, allowCitizenCancel: s.allowCitizenCancel, maxAttachments: s.maxAttachments,
     activationRequired: s.requireEmailVerification && isEmailConfigured()
   };
