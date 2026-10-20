@@ -28,13 +28,13 @@ const depts = {};
 for (const [name, description] of deptData) depts[name] = await Department.findOneAndUpdate({ name }, { name, description, contactInformation: 'service@county.gov', status: 'active' }, { upsert: true, returnDocument: 'after' });
 
 const svc = [
-  ['Pothole or Damaged Road', 'Public Works', '🚧', 'Report potholes, cracks or damaged road surfaces that are unsafe for drivers or pedestrians.', 7, 'Tell us the exact road or landmark and how big the damage is. A clear photo helps the officer find and assess it quickly.', ['Road name or nearest landmark', 'Size of the damage (small, medium or large)', 'Whether it is a safety hazard']],
-  ['Blocked Drainage', 'Water and Sanitation', '🌊', 'Report blocked drains or flooding caused by clogged drainage channels.', 3, 'Describe where the water is collecting and since when. Add a photo if it is safe to take one.', ['Exact location of the blocked drain', 'How long it has been blocked', 'Whether water is entering homes or businesses']],
-  ['Burst Water Pipe', 'Water and Sanitation', '💧', 'Report burst or leaking water pipes that are wasting water or flooding an area.', 2, 'Give the closest street, plot or landmark. If the leak is large, mention it so it can be prioritised.', ['Location of the leak', 'Approximate size of the leak', 'Date you first noticed it']],
-  ['Illegal Dumping', 'Water and Sanitation', '♻️', 'Report garbage dumped in open spaces, roadsides or drainage channels.', 4, 'Describe the type of waste and how much there is. Do not touch hazardous waste. A photo from a safe distance is enough.', ['Location of the dumped waste', 'Type of waste (household, construction, other)', 'Approximate amount']],
-  ['Faulty Traffic Light', 'Public Works', '🚦', 'Report traffic lights that are not working, stuck or showing the wrong signals.', 3, 'Name the junction and describe what the lights are doing. Mention the time of day if it happens only at certain hours.', ['Name of the junction', 'What is wrong with the lights', 'Time of day it happens']],
-  ['Public Park Maintenance', 'County Services', '🌳', 'Report overgrown grass, broken benches or damaged play equipment in public parks.', 10, 'Name the park and describe the problem. Mention any safety risk for children or visitors.', ['Name of the park or open space', 'What needs fixing', 'Any safety risk']],
-  ['Public Health Nuisance', 'County Services', '🦟', 'Report health nuisances such as stagnant water, overflowing public toilets or pest infestations.', 5, 'Describe the problem and where it is. Please do not include personal details of other people in photos.', ['Location of the nuisance', 'Type of nuisance', 'How long it has been a problem']]
+  ['Pothole or Damaged Road', 'Public Works', '🚧', 'Report potholes, cracks or damaged road surfaces that are unsafe for drivers or pedestrians.', 7, 'Tell us the exact road or landmark and how long the issue has been present. Add a photo if you have one.', ['location', 'description', 'severity']],
+  ['Blocked Drainage', 'Water and Sanitation', '🌊', 'Report blocked drains or flooding caused by clogged drainage channels.', 3, 'Describe where the water is collecting and since when. Add a photo if needed.', ['location', 'description']],
+  ['Burst Water Pipe', 'Water and Sanitation', '💧', 'Report burst or leaking water pipes that are wasting water or flooding an area.', 2, 'Give the closest street, plot or landmark. If the leak is still active, note that clearly.', ['location', 'description']],
+  ['Illegal Dumping', 'Water and Sanitation', '♻️', 'Report garbage dumped in open spaces, roadsides or drainage channels.', 4, 'Describe the type of waste and how much there is. Do not touch items that may be hazardous.', ['location', 'description']],
+  ['Faulty Traffic Light', 'Public Works', '🚦', 'Report traffic lights that are not working, stuck or showing the wrong signals.', 3, 'Name the junction and describe what the lights are doing. Mention any safety risk.', ['location', 'description']],
+  ['Public Park Maintenance', 'County Services', '🌳', 'Report overgrown grass, broken benches or damaged play equipment in public parks.', 10, 'Name the park and describe the problem. Mention whether the area is still in use.', ['location', 'description']],
+  ['Public Health Nuisance', 'County Services', '🦟', 'Report health nuisances such as stagnant water, overflowing public toilets or pest infestations.', 5, 'Describe the problem and where it is located. Include any immediate safety concerns.', ['location', 'description']]
 ];
 const services = [];
 for (const [name, dept, icon, description, days, instructions, requiredInformation] of svc) {
@@ -74,8 +74,8 @@ if (await ServiceRequest.estimatedDocumentCount() === 0) {
     const citizen = i % 2 ? c2 : c1;
     const req = await ServiceRequest.create({
       referenceNumber: await nextReference(), citizen: citizen._id, service: service._id, department: service.department,
-      assignedOfficer: null, title: `${service.name} (sample ${i + 1})`,
-      description: 'Demonstration request created by the seed script. This is fictional data.', location: 'Muranga County',
+      assignedOfficer: null, title: `${service.name} (seed record ${i + 1})`,
+      description: 'Request created during initial system setup using the configured service catalog.', location: 'Muranga County',
       status, submittedAt: today, resolvedAt: undefined, resolutionSummary: undefined
     });
     await RequestStatusHistory.create({ request: req._id, previousStatus: null, newStatus: status, changedBy: citizen._id, comment: 'Request submitted' });
